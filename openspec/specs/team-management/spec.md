@@ -7,11 +7,11 @@
 ## Requirements
 
 ### Requirement: 팀 생성
-시스템은 로그인된 사용자가 팀을 생성하고 고유 초대코드(ABCD-1234 형식, 영문대문자4자-숫자4자)를 자동 발급해야 한다(SHALL). 생성자가 owner가 된다(MUST).
+시스템은 로그인된 사용자가 팀을 생성하고 고유 초대코드를 자동 발급해야 한다(SHALL). 생성 후 성공 화면에 초대코드 복사 버튼과 "칸반 시작하기" 버튼을 표시해야 한다(MUST). 팀 생성 시 `users.team_id`를 해당 팀 id로 업데이트해야 한다(MUST).
 
-#### Scenario: 정상 팀 생성
-- **WHEN** POST /api/teams {"name": "개발팀"} (로그인 상태)
-- **THEN** HTTP 201, {"id": 1, "name": "개발팀", "invite_code": "ABCD-1234", "owner_id": 1}
+#### Scenario: 정상 팀 생성 후 성공 화면
+- **WHEN** POST /api/teams {"name": "개발팀"} 성공
+- **THEN** 성공 화면 표시: 팀 이름, 초대코드(복사 버튼), "칸반 시작하기 →" 버튼
 
 #### Scenario: 팀 이름 누락
 - **WHEN** name 없이 POST /api/teams
@@ -33,11 +33,11 @@
 ---
 
 ### Requirement: 초대코드로 팀 합류
-시스템은 유효한 초대코드로 팀에 합류할 수 있어야 한다(SHALL). 이미 소속된 팀은 중복 합류 불가(MUST).
+시스템은 유효한 초대코드로 팀에 합류할 수 있어야 한다(SHALL). 합류 시 `users.team_id`를 해당 팀 id로 업데이트해야 한다(MUST). 이미 소속된 팀은 중복 합류 불가(MUST).
 
-#### Scenario: 정상 합류
-- **WHEN** POST /api/teams/join {"invite_code": "ABCD-1234"} (로그인 상태)
-- **THEN** HTTP 200, {"id": 1, "name": "개발팀"}
+#### Scenario: 정상 합류 후 칸반 이동
+- **WHEN** POST /api/teams/join {"invite_code": "ABCD-1234"} 성공
+- **THEN** HTTP 200, {"id": 1, "name": "개발팀"}, FE에서 /kanban?team=1로 이동
 
 #### Scenario: 잘못된 초대코드
 - **WHEN** 존재하지 않는 초대코드로 POST /api/teams/join

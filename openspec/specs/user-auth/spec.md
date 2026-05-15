@@ -24,11 +24,11 @@
 ---
 
 ### Requirement: 로그인
-시스템은 이메일·비밀번호 검증 후 JWT(24h 만료, 갱신 없음)를 발급해야 한다(SHALL).
+시스템은 이메일·비밀번호 검증 후 JWT(24h 만료, 갱신 없음)를 발급해야 한다(SHALL). 응답에 `user.team_id` 포함(MUST).
 
 #### Scenario: 정상 로그인
 - **WHEN** POST /api/auth/login {"email": "user@example.com", "password": "pass1234"}
-- **THEN** HTTP 200, {"token": "<JWT>", "user": {"id": 1, "email": "user@example.com"}}
+- **THEN** HTTP 200, {"token": "<JWT>", "user": {"id": 1, "email": "user@example.com", "team_id": null}}
 
 #### Scenario: 잘못된 비밀번호
 - **WHEN** 올바르지 않은 비밀번호로 POST /api/auth/login
