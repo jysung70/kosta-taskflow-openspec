@@ -30,4 +30,14 @@
 - **Frontend**: Vanilla JS + Tailwind 4화면(로그인·팀선택·칸반·채팅), StaticFiles로 BE에서 서빙
 - **DB**: 로컬 SQLite ↔ 배포 Neon PostgreSQL 양쪽 호환 (SQLAlchemy URL 환경변수 분기)
 - **배포**: Vercel Functions(FastAPI) + Vercel Storage Neon Pooled 연결, `DATABASE_URL` 환경변수 자동 주입
-- **Out of Scope**: 알림·파일 첨부·전문 검색·권한 세분화·다국어·WebSocket·테스트 자동화
+- **Out of Scope**: 아래 7종은 이번 MVP에서 구현하지 않음
+
+## Out of Scope
+
+- [X] **알림** — 이메일/푸시 알림 없음. 채팅 폴링으로 대체
+- [X] **파일 첨부** — 이미지/파일 업로드 없음. 텍스트 채팅만
+- [X] **검색** — 전문 검색 없음. 단순 SELECT 조회만
+- [X] **권한 세분화** — 팀 admin/member 구분만. 페이지별 권한 없음
+- [X] **다국어** — 한글 UI만. 다국어 리소스 분리 없음
+- [X] **WebSocket** — 실시간 메시지 안 함. 5초 폴링으로 대체
+- [X] **테스트 자동화** — pytest/jest 자동 테스트 없음. 수동 동작 확인만
