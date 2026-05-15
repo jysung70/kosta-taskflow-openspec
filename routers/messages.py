@@ -24,7 +24,7 @@ def _fmt(m: models.Message) -> dict:
         "content": m.content,
         "user_id": m.user_id,
         "team_id": m.team_id,
-        "created_at": m.created_at.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",  # millisecond precision
+        "created_at": m.created_at.strftime("%Y-%m-%dT%H:%M:%S.%f") + "Z",  # full microsecond precision
         "sender_email": m.user.email,
     }
 

@@ -56,11 +56,18 @@
     const me = getUser();
     let lastSince = null;
     let pollInterval = null;
+    const seenIds = new Set();
 
     document.getElementById('tab-nav').innerHTML = renderTabNav('chat');
 
     function escHtml(s) {
       return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function appendMessage(m, list) {
+      if (seenIds.has(m.id)) return;
+      seenIds.add(m.id);
+      list.appendChild(renderMessage(m));
     }
 
     function renderMessage(m) {
@@ -105,7 +112,7 @@
           showEmptyState(true);
         } else {
           showEmptyState(false);
-          msgs.forEach(m => list.appendChild(renderMessage(m)));
+          msgs.forEach(m => appendMessage(m, list));
           lastSince = msgs[msgs.length - 1].created_at;
         }
         scrollBottom();
@@ -124,7 +131,7 @@
           showEmptyState(false);
           const list = document.getElementById('msg-list');
           const wasAtBottom = list.scrollHeight - list.clientHeight - list.scrollTop < 60;
-          msgs.forEach(m => list.appendChild(renderMessage(m)));
+          msgs.forEach(m => appendMessage(m, list));
           lastSince = msgs[msgs.length - 1].created_at;
           if (wasAtBottom) scrollBottom();
         }
@@ -140,7 +147,7 @@
         const m = await api('POST', `/api/teams/${teamId}/messages`, { content });
         showEmptyState(false);
         const list = document.getElementById('msg-list');
-        list.appendChild(renderMessage(m));
+        appendMessage(m, list);
         lastSince = m.created_at;
         scrollBottom();
       } catch (err) { showError(err.message); }
