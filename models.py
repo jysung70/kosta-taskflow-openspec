@@ -16,10 +16,12 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     password_hash = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+    team_id = Column(Integer, ForeignKey("teams.id"), nullable=True)
 
     teams = relationship("Team", secondary=team_members, back_populates="members")
     owned_teams = relationship("Team", foreign_keys="Team.owner_id", back_populates="owner")
-    tasks = relationship("Task", back_populates="creator")
+    tasks = relationship("Task", foreign_keys="Task.creator_id", back_populates="creator")
+    assigned_tasks = relationship("Task", foreign_keys="Task.assignee_id", back_populates="assignee")
     messages = relationship("Message", back_populates="user")
 
 class Team(Base):
@@ -41,9 +43,11 @@ class Task(Base):
     title = Column(String, nullable=False)
     status = Column(String, default="TODO", nullable=False)
     creator_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    assignee_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     team = relationship("Team", back_populates="tasks")
-    creator = relationship("User", back_populates="tasks")
+    creator = relationship("User", foreign_keys=[creator_id], back_populates="tasks")
+    assignee = relationship("User", foreign_keys=[assignee_id], back_populates="assigned_tasks")
 
 class Message(Base):
     __tablename__ = "messages"

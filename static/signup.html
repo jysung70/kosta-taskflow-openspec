@@ -8,41 +8,54 @@
 </head>
 <body class="min-h-screen bg-gray-50 flex items-center justify-center">
   <div class="bg-white shadow rounded-lg p-8 w-full max-w-sm">
-    <h1 class="text-2xl font-bold text-center text-blue-600 mb-6">TaskFlow 가입</h1>
-    <p id="error-msg" class="hidden bg-red-50 text-red-600 text-sm rounded p-2 mb-4"></p>
+    <div class="flex justify-center mb-2">
+      <span class="bg-teal-600 text-white text-lg font-bold px-4 py-1 rounded">TaskFlow</span>
+    </div>
+    <h2 class="text-center text-gray-700 font-semibold text-lg mb-6">회원가입</h2>
     <form id="signup-form" class="space-y-4">
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">이메일</label>
-        <input id="email" type="email" required placeholder="email@example.com"
-          class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+        <input id="email" type="email" required placeholder="이메일 입력"
+          class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400">
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">비밀번호</label>
-        <input id="password" type="password" required placeholder="비밀번호"
-          class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+        <input id="password" type="password" required placeholder="비밀번호 (8자 이상)"
+          class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400">
+        <p id="password-error" class="hidden text-red-500 text-xs mt-1"></p>
       </div>
-      <button type="submit"
-        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded py-2 text-sm transition">
+      <p id="error-msg" class="hidden bg-red-50 border border-red-200 text-red-600 text-sm rounded p-2"></p>
+      <button id="submit-btn" type="submit"
+        class="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded py-2 text-sm transition">
         가입하기
       </button>
     </form>
     <p class="mt-4 text-center text-sm text-gray-500">
-      이미 계정이 있으신가요? <a href="/" class="text-blue-600 hover:underline">로그인</a>
+      이미 계정이 있으신가요? <a href="/" class="text-teal-600 hover:underline">로그인</a>
     </p>
   </div>
   <script src="/static/app.js"></script>
   <script>
     document.getElementById('signup-form').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const pw = document.getElementById('password').value;
+      const pwErr = document.getElementById('password-error');
+      if (pw.length < 8) {
+        pwErr.textContent = '8자 이상 입력해주세요';
+        pwErr.classList.remove('hidden');
+        return;
+      }
+      pwErr.classList.add('hidden');
+      const btn = document.getElementById('submit-btn');
+      setLoading(btn, true);
       try {
         const data = await api('POST', '/api/auth/signup', {
           email: document.getElementById('email').value,
-          password: document.getElementById('password').value,
+          password: pw,
         });
         saveAuth(data.token, data.user);
-        window.location.href = '/teams';
+        redirectAfterAuth(data.user);
       } catch (err) {
         showError(err.message);
+        setLoading(btn, false);
       }
     });
   </script>

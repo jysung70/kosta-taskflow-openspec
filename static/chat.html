@@ -7,15 +7,21 @@
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="min-h-screen bg-gray-50 flex flex-col">
-  <nav class="bg-white shadow px-6 py-3 flex justify-between items-center shrink-0">
-    <div class="flex items-center gap-3">
-      <a href="/teams" class="text-gray-400 hover:text-gray-600 text-sm">← 팀 목록</a>
-      <span class="text-blue-600 font-bold text-lg">TaskFlow</span>
-      <span id="team-name" class="text-sm text-gray-500"></span>
+
+  <!-- 헤더 -->
+  <nav class="bg-white shadow px-4 py-3 flex items-center justify-between shrink-0">
+    <div class="flex items-center gap-2">
+      <a href="/teams" class="text-gray-400 hover:text-gray-600 text-xs">← 팀</a>
+      <span class="bg-teal-600 text-white font-bold px-2 py-0.5 rounded text-sm">TaskFlow</span>
+      <span id="team-name" class="text-sm text-gray-500 font-medium"></span>
     </div>
-    <div class="flex gap-2">
-      <a id="kanban-link" href="#" class="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200">칸반</a>
-      <button id="logout-btn" class="text-sm text-gray-400 hover:text-red-500">로그아웃</button>
+    <!-- 탭 네비게이션 -->
+    <div id="tab-nav" class="flex gap-1"></div>
+    <div class="flex items-center gap-3">
+      <span class="text-xs text-green-500 font-medium flex items-center gap-1">
+        <span class="inline-block w-2 h-2 bg-green-400 rounded-full"></span>5초마다 새로고침
+      </span>
+      <button id="logout-btn" class="text-xs text-gray-400 hover:text-red-500">로그아웃</button>
     </div>
   </nav>
 
@@ -23,18 +29,22 @@
 
   <!-- 메시지 목록 -->
   <div id="msg-list" class="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-    <p class="text-center text-gray-400 text-sm">채팅을 불러오는 중...</p>
+    <!-- Empty state -->
+    <div id="empty-state" class="hidden flex-col items-center justify-center h-full text-center py-16">
+      <div class="text-6xl mb-4">💬</div>
+      <p class="text-gray-600 font-medium mb-1">아직 대화가 없습니다</p>
+      <p class="text-gray-400 text-sm">첫 메시지를 보내 팀원과 대화를 시작하세요</p>
+    </div>
   </div>
 
   <!-- 입력 영역 -->
   <div class="bg-white border-t px-4 py-3 shrink-0">
     <form id="msg-form" class="flex gap-2">
-      <input id="msg-input" type="text" placeholder="메시지 입력..." maxlength="1000" autocomplete="off"
-        class="flex-1 border border-gray-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+      <input id="msg-input" type="text" placeholder="메시지 입력 (1000자 이내)..." maxlength="1000" autocomplete="off"
+        class="flex-1 border border-gray-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400">
       <button type="submit"
-        class="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-5 py-2 text-sm font-medium">전송</button>
+        class="bg-teal-600 hover:bg-teal-700 text-white rounded-full px-5 py-2 text-sm font-medium">전송</button>
     </form>
-    <p class="text-xs text-gray-300 text-right mt-1">5초 자동 새로고침</p>
   </div>
 
   <script src="/static/app.js"></script>
@@ -42,32 +52,34 @@
     if (!requireAuth()) throw new Error();
     const teamId = getTeamId();
     if (!teamId) { window.location.href = '/teams'; throw new Error(); }
-    document.getElementById('kanban-link').href = `/kanban?team=${teamId}`;
 
     const me = getUser();
     let lastSince = null;
     let pollInterval = null;
 
+    document.getElementById('tab-nav').innerHTML = renderTabNav('chat');
+
+    function escHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
     function renderMessage(m) {
       const isMe = m.user_id === me?.id;
+      const time = new Date(m.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+      const senderShort = m.sender_email ? m.sender_email.split('@')[0] : '?';
       const div = document.createElement('div');
       div.className = `flex ${isMe ? 'justify-end' : 'justify-start'}`;
-      const time = new Date(m.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
       div.innerHTML = isMe
         ? `<div class="max-w-xs">
-            <div class="bg-blue-500 text-white rounded-2xl rounded-tr-sm px-4 py-2 text-sm">${escHtml(m.content)}</div>
+            <div class="bg-teal-500 text-white rounded-2xl rounded-tr-sm px-4 py-2 text-sm">${escHtml(m.content)}</div>
             <p class="text-xs text-gray-400 text-right mt-0.5">${time}</p>
            </div>`
         : `<div class="max-w-xs">
-            <p class="text-xs text-gray-500 mb-0.5 ml-1">${escHtml(m.sender_email)}</p>
+            <p class="text-xs text-gray-500 mb-0.5 ml-1">${escHtml(senderShort)}</p>
             <div class="bg-white border rounded-2xl rounded-tl-sm px-4 py-2 text-sm shadow-sm">${escHtml(m.content)}</div>
             <p class="text-xs text-gray-400 ml-1 mt-0.5">${time}</p>
            </div>`;
       return div;
-    }
-
-    function escHtml(s) {
-      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
 
     function scrollBottom() {
@@ -75,38 +87,48 @@
       list.scrollTop = list.scrollHeight;
     }
 
+    function showEmptyState(show) {
+      const es = document.getElementById('empty-state');
+      es.classList.toggle('hidden', !show);
+      es.classList.toggle('flex', show);
+    }
+
     async function loadInitial() {
       try {
         const msgs = await api('GET', `/api/teams/${teamId}/messages`);
         const list = document.getElementById('msg-list');
-        list.innerHTML = '';
+        // empty state 제거
+        const existing = list.querySelectorAll('div:not(#empty-state)');
+        existing.forEach(e => e.remove());
+
         if (!msgs.length) {
-          list.innerHTML = '<p class="text-center text-gray-400 text-sm">첫 메시지를 보내보세요!</p>';
+          showEmptyState(true);
         } else {
+          showEmptyState(false);
           msgs.forEach(m => list.appendChild(renderMessage(m)));
           lastSince = msgs[msgs.length - 1].created_at;
         }
         scrollBottom();
 
-        // 팀 이름
         const teams = await api('GET', '/api/teams');
         const team = teams.find(t => String(t.id) === String(teamId));
-        if (team) document.getElementById('team-name').textContent = `— ${team.name}`;
+        if (team) document.getElementById('team-name').textContent = team.name;
       } catch (err) { showError(err.message); }
     }
 
     async function pollMessages() {
       if (!lastSince) return;
       try {
-        const msgs = await api('GET', `/api/teams/${teamId}/messages?since=${lastSince}`);
+        const msgs = await api('GET', `/api/teams/${teamId}/messages?since=${encodeURIComponent(lastSince)}`);
         if (msgs.length) {
+          showEmptyState(false);
           const list = document.getElementById('msg-list');
           const wasAtBottom = list.scrollHeight - list.clientHeight - list.scrollTop < 60;
           msgs.forEach(m => list.appendChild(renderMessage(m)));
           lastSince = msgs[msgs.length - 1].created_at;
           if (wasAtBottom) scrollBottom();
         }
-      } catch (err) { /* 폴링 중 에러는 무시 */ }
+      } catch { /* 폴링 에러 무시 */ }
     }
 
     document.getElementById('msg-form').addEventListener('submit', async (e) => {
@@ -116,10 +138,8 @@
       document.getElementById('msg-input').value = '';
       try {
         const m = await api('POST', `/api/teams/${teamId}/messages`, { content });
+        showEmptyState(false);
         const list = document.getElementById('msg-list');
-        // 빈 상태 텍스트 제거
-        const empty = list.querySelector('p.text-center');
-        if (empty) empty.remove();
         list.appendChild(renderMessage(m));
         lastSince = m.created_at;
         scrollBottom();
@@ -132,9 +152,7 @@
       clearAuth(); window.location.href = '/';
     });
 
-    loadInitial().then(() => {
-      pollInterval = setInterval(pollMessages, 5000);
-    });
+    loadInitial().then(() => { pollInterval = setInterval(pollMessages, 5000); });
   </script>
 </body>
 </html>

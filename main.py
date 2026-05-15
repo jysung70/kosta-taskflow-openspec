@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from sqlalchemy import text
 from database import engine
 import models
 from routers import auth as auth_router
@@ -11,6 +12,28 @@ from routers import tasks as tasks_router
 from routers import messages as messages_router
 
 models.Base.metadata.create_all(bind=engine)
+
+def _run_migrations():
+    db_url = str(engine.url)
+    is_sqlite = db_url.startswith("sqlite")
+    with engine.connect() as conn:
+        if is_sqlite:
+            try:
+                conn.execute(text("ALTER TABLE tasks ADD COLUMN assignee_id INTEGER REFERENCES users(id)"))
+                conn.commit()
+            except Exception:
+                pass
+            try:
+                conn.execute(text("ALTER TABLE users ADD COLUMN team_id INTEGER REFERENCES teams(id)"))
+                conn.commit()
+            except Exception:
+                pass
+        else:
+            conn.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS assignee_id INTEGER REFERENCES users(id)"))
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS team_id INTEGER REFERENCES teams(id)"))
+            conn.commit()
+
+_run_migrations()
 
 app = FastAPI(title="TaskFlow MVP")
 

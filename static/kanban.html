@@ -8,67 +8,91 @@
   <style>
     .task-card { cursor: grab; }
     .task-card:active { cursor: grabbing; opacity: 0.6; }
-    .col-drop-zone.drag-over { background-color: #dbeafe; }
+    .col-drop { transition: background 0.15s; }
+    .col-drop.drag-over { background: #e0f2fe; }
+    /* 모바일 탭 전환 */
+    .mobile-col { display: none; }
+    @media (max-width: 767px) {
+      #desktop-cols { display: none; }
+      .mobile-col.active { display: block; }
+    }
+    @media (min-width: 768px) {
+      #mobile-tabs { display: none; }
+    }
   </style>
 </head>
-<body class="min-h-screen bg-gray-100">
-  <nav class="bg-white shadow px-6 py-3 flex justify-between items-center">
-    <div class="flex items-center gap-3">
-      <a href="/teams" class="text-gray-400 hover:text-gray-600 text-sm">← 팀 목록</a>
-      <span class="text-blue-600 font-bold text-lg">TaskFlow</span>
-      <span id="team-name" class="text-sm text-gray-500"></span>
+<body class="min-h-screen bg-gray-100 flex flex-col">
+
+  <!-- 헤더 -->
+  <nav class="bg-white shadow px-4 py-3 flex items-center justify-between shrink-0">
+    <div class="flex items-center gap-2">
+      <a href="/teams" class="text-gray-400 hover:text-gray-600 text-xs">← 팀</a>
+      <span class="bg-teal-600 text-white font-bold px-2 py-0.5 rounded text-sm">TaskFlow</span>
+      <span id="team-name" class="text-sm text-gray-500 font-medium"></span>
     </div>
-    <div class="flex gap-2">
-      <a id="chat-link" href="#" class="text-sm bg-green-100 text-green-700 px-3 py-1 rounded hover:bg-green-200">채팅</a>
-      <button id="logout-btn" class="text-sm text-gray-400 hover:text-red-500">로그아웃</button>
+    <!-- 탭 네비게이션 -->
+    <div id="tab-nav" class="flex gap-1"></div>
+    <div class="flex items-center gap-2">
+      <span id="user-email" class="text-xs text-gray-400 hidden md:block"></span>
+      <button id="logout-btn" class="text-xs text-gray-400 hover:text-red-500">로그아웃</button>
     </div>
   </nav>
 
-  <p id="error-msg" class="hidden bg-red-50 text-red-600 text-sm rounded p-2 mx-6 mt-2"></p>
+  <!-- 필터 탭 -->
+  <div class="bg-white border-b px-4 py-2 flex items-center gap-2 shrink-0">
+    <button class="filter-btn active-filter px-3 py-1 text-xs rounded font-medium bg-gray-900 text-white" data-filter="all">전체</button>
+    <button class="filter-btn px-3 py-1 text-xs rounded font-medium bg-gray-100 text-gray-600 hover:bg-gray-200" data-filter="me">@me</button>
+    <button class="filter-btn px-3 py-1 text-xs rounded font-medium bg-gray-100 text-gray-600 hover:bg-gray-200" data-filter="unassigned">미할당</button>
+  </div>
 
-  <div class="flex gap-4 p-6 overflow-x-auto">
-    <!-- TODO 컬럼 -->
-    <div class="flex-1 min-w-60">
-      <div class="flex justify-between items-center mb-3">
-        <h2 class="font-bold text-gray-600 uppercase text-sm tracking-wide">📋 TODO</h2>
-        <button onclick="openAddModal('TODO')" class="text-xs bg-gray-200 hover:bg-gray-300 rounded px-2 py-1">+ 추가</button>
+  <p id="error-msg" class="hidden bg-red-50 text-red-600 text-sm rounded p-2 mx-4 mt-2 shrink-0"></p>
+
+  <!-- 모바일 컬럼 탭 -->
+  <div id="mobile-tabs" class="flex border-b bg-white shrink-0">
+    <button class="mobile-tab-btn flex-1 py-2 text-xs font-medium text-teal-600 border-b-2 border-teal-600" data-col="TODO">TODO</button>
+    <button class="mobile-tab-btn flex-1 py-2 text-xs font-medium text-gray-500" data-col="DOING">DOING</button>
+    <button class="mobile-tab-btn flex-1 py-2 text-xs font-medium text-gray-500" data-col="DONE">DONE</button>
+  </div>
+
+  <!-- 데스크탑 3컬럼 -->
+  <div id="desktop-cols" class="flex gap-4 p-4 flex-1 overflow-x-auto">
+    <!-- TODO -->
+    <div class="flex-1 min-w-56 flex flex-col">
+      <div class="flex items-center justify-between mb-2 px-1">
+        <span id="hdr-TODO" class="text-xs font-bold text-yellow-700 bg-yellow-100 px-2 py-1 rounded">TODO · 0</span>
+        <button onclick="openInline('TODO')" class="text-xs text-gray-400 hover:text-teal-600">+ 추가</button>
       </div>
-      <div id="col-TODO" class="col-drop-zone space-y-2 min-h-20 rounded-lg p-1"
-        ondragover="onDragOver(event)" ondrop="onDrop(event,'TODO')"></div>
+      <div id="inline-TODO" class="hidden mb-2"></div>
+      <div id="col-TODO" class="col-drop flex-1 rounded-lg p-1 space-y-2 min-h-24"
+        ondragover="onDragOver(event)" ondrop="onDrop(event,'TODO')" ondragleave="onDragLeave(event)"></div>
     </div>
-
-    <!-- DOING 컬럼 -->
-    <div class="flex-1 min-w-60">
-      <div class="flex justify-between items-center mb-3">
-        <h2 class="font-bold text-blue-600 uppercase text-sm tracking-wide">⚡ DOING</h2>
-        <button onclick="openAddModal('DOING')" class="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded px-2 py-1">+ 추가</button>
+    <!-- DOING -->
+    <div class="flex-1 min-w-56 flex flex-col">
+      <div class="flex items-center justify-between mb-2 px-1">
+        <span id="hdr-DOING" class="text-xs font-bold text-blue-700 bg-blue-100 px-2 py-1 rounded">DOING · 0</span>
+        <button onclick="openInline('DOING')" class="text-xs text-gray-400 hover:text-teal-600">+ 추가</button>
       </div>
-      <div id="col-DOING" class="col-drop-zone space-y-2 min-h-20 rounded-lg p-1"
-        ondragover="onDragOver(event)" ondrop="onDrop(event,'DOING')"></div>
+      <div id="inline-DOING" class="hidden mb-2"></div>
+      <div id="col-DOING" class="col-drop flex-1 rounded-lg p-1 space-y-2 min-h-24"
+        ondragover="onDragOver(event)" ondrop="onDrop(event,'DOING')" ondragleave="onDragLeave(event)"></div>
     </div>
-
-    <!-- DONE 컬럼 -->
-    <div class="flex-1 min-w-60">
-      <div class="flex justify-between items-center mb-3">
-        <h2 class="font-bold text-green-600 uppercase text-sm tracking-wide">✅ DONE</h2>
-        <button onclick="openAddModal('DONE')" class="text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded px-2 py-1">+ 추가</button>
+    <!-- DONE -->
+    <div class="flex-1 min-w-56 flex flex-col">
+      <div class="flex items-center justify-between mb-2 px-1">
+        <span id="hdr-DONE" class="text-xs font-bold text-green-700 bg-green-100 px-2 py-1 rounded">DONE · 0</span>
+        <button onclick="openInline('DONE')" class="text-xs text-gray-400 hover:text-teal-600">+ 추가</button>
       </div>
-      <div id="col-DONE" class="col-drop-zone space-y-2 min-h-20 rounded-lg p-1"
-        ondragover="onDragOver(event)" ondrop="onDrop(event,'DONE')"></div>
+      <div id="inline-DONE" class="hidden mb-2"></div>
+      <div id="col-DONE" class="col-drop flex-1 rounded-lg p-1 space-y-2 min-h-24"
+        ondragover="onDragOver(event)" ondrop="onDrop(event,'DONE')" ondragleave="onDragLeave(event)"></div>
     </div>
   </div>
 
-  <!-- 태스크 추가 모달 -->
-  <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-10">
-    <div class="bg-white rounded-lg shadow-xl p-6 w-80">
-      <h3 class="font-semibold mb-3">태스크 추가</h3>
-      <input id="modal-title" type="text" placeholder="태스크 제목" autofocus
-        class="w-full border border-gray-300 rounded px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-blue-400">
-      <div class="flex gap-2 justify-end">
-        <button onclick="closeModal()" class="text-sm text-gray-500 hover:text-gray-700 px-3 py-1">취소</button>
-        <button onclick="addTask()" class="text-sm bg-blue-600 hover:bg-blue-700 text-white rounded px-4 py-1">추가</button>
-      </div>
-    </div>
+  <!-- 모바일 단일 컬럼 뷰 -->
+  <div class="p-4 flex-1">
+    <div id="mob-col-TODO" class="mobile-col active space-y-2"></div>
+    <div id="mob-col-DOING" class="mobile-col space-y-2"></div>
+    <div id="mob-col-DONE" class="mobile-col space-y-2"></div>
   </div>
 
   <script src="/static/app.js"></script>
@@ -76,85 +100,178 @@
     if (!requireAuth()) throw new Error();
     const teamId = getTeamId();
     if (!teamId) { window.location.href = '/teams'; throw new Error(); }
-    document.getElementById('chat-link').href = `/chat?team=${teamId}`;
 
+    const me = getUser();
+    let allTasks = [];
+    let activeFilter = 'all';
+    let activeMobileCol = 'TODO';
     let dragTaskId = null;
-    let modalStatus = 'TODO';
 
-    function openAddModal(status) {
-      modalStatus = status;
-      document.getElementById('modal-title').value = '';
-      document.getElementById('modal').classList.remove('hidden');
-      document.getElementById('modal-title').focus();
-    }
-    function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+    // 탭 네비게이션
+    document.getElementById('tab-nav').innerHTML = renderTabNav('kanban');
+    document.getElementById('user-email').textContent = me?.email || '';
 
-    document.getElementById('modal-title').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') addTask();
-      if (e.key === 'Escape') closeModal();
+    // 필터 버튼
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-btn').forEach(b => {
+          b.classList.remove('bg-gray-900','text-white','active-filter');
+          b.classList.add('bg-gray-100','text-gray-600');
+        });
+        btn.classList.add('bg-gray-900','text-white','active-filter');
+        btn.classList.remove('bg-gray-100','text-gray-600');
+        activeFilter = btn.dataset.filter;
+        renderTasks();
+      });
     });
 
-    async function addTask() {
-      const title = document.getElementById('modal-title').value.trim();
-      if (!title) return;
-      try {
-        await api('POST', `/api/teams/${teamId}/tasks`, { title });
-        closeModal();
-        loadTasks();
-      } catch (err) { showError(err.message); }
+    // 모바일 탭
+    document.querySelectorAll('.mobile-tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        activeMobileCol = btn.dataset.col;
+        document.querySelectorAll('.mobile-tab-btn').forEach(b => {
+          b.classList.remove('text-teal-600','border-b-2','border-teal-600');
+          b.classList.add('text-gray-500');
+        });
+        btn.classList.add('text-teal-600','border-b-2','border-teal-600');
+        btn.classList.remove('text-gray-500');
+        document.querySelectorAll('.mobile-col').forEach(c => c.classList.remove('active'));
+        document.getElementById(`mob-col-${activeMobileCol}`).classList.add('active');
+      });
+    });
+
+    // 인라인 태스크 생성
+    function openInline(status) {
+      ['TODO','DOING','DONE'].forEach(s => {
+        const el = document.getElementById(`inline-${s}`);
+        el.innerHTML = '';
+        el.classList.add('hidden');
+      });
+      const el = document.getElementById(`inline-${status}`);
+      el.innerHTML = `
+        <div class="bg-white border-2 border-teal-400 rounded-lg p-3">
+          <input id="inline-title" type="text" placeholder="태스크 제목" autofocus
+            class="w-full text-sm outline-none mb-2 border-b border-gray-200 pb-1">
+          <div class="flex items-center justify-between text-xs text-gray-400">
+            <span>담당자: <span class="text-teal-600 font-medium">@me</span></span>
+            <span>Enter 저장 · Esc 취소</span>
+          </div>
+        </div>`;
+      el.classList.remove('hidden');
+      const input = document.getElementById('inline-title');
+      input.focus();
+      input.addEventListener('keydown', async (e) => {
+        if (e.key === 'Enter') {
+          const title = input.value.trim();
+          if (!title) return;
+          try {
+            await api('POST', `/api/teams/${teamId}/tasks`, { title, assignee_id: me?.id });
+            el.innerHTML = ''; el.classList.add('hidden');
+            await loadTasks();
+          } catch (err) { showError(err.message); }
+        }
+        if (e.key === 'Escape') { el.innerHTML = ''; el.classList.add('hidden'); }
+      });
     }
 
-    function renderTask(task) {
+    // 태스크 필터링
+    function filteredTasks(tasks) {
+      if (activeFilter === 'me') return tasks.filter(t => t.assignee_id === me?.id);
+      if (activeFilter === 'unassigned') return tasks.filter(t => !t.assignee_id);
+      return tasks;
+    }
+
+    // Empty state HTML
+    function emptyState(status) {
+      const isTodo = status === 'TODO';
+      return `<div class="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center text-gray-400">
+        <div class="text-3xl mb-2">📋</div>
+        <p class="text-sm font-medium mb-1">카드 없음</p>
+        <p class="text-xs">${isTodo ? '<button onclick="openInline(\'TODO\')" class="text-teal-500 hover:underline">+ 첫 태스크 만들기</button>' : '드래그로 이동'}</p>
+      </div>`;
+    }
+
+    // 카드 렌더
+    function renderCard(task) {
+      const assigneeLabel = task.assignee_email
+        ? '@' + task.assignee_email.split('@')[0]
+        : (task.assignee_id ? '@?' : '미할당');
       const card = document.createElement('div');
-      card.className = 'task-card bg-white rounded shadow p-3 text-sm flex justify-between items-start';
+      card.className = 'task-card bg-white rounded-lg shadow-sm p-3 text-sm border border-gray-100 hover:shadow-md transition';
       card.draggable = true;
       card.dataset.taskId = task.id;
       card.innerHTML = `
-        <span class="flex-1 pr-2">${task.title}</span>
-        <button class="text-gray-300 hover:text-red-400 text-xs shrink-0" onclick="deleteTask(${task.id})">✕</button>`;
+        <div class="flex justify-between items-start gap-2">
+          <span class="flex-1 font-medium text-gray-800 leading-snug">${escHtml(task.title)}</span>
+          <button class="text-gray-300 hover:text-red-400 shrink-0 text-xs" onclick="deleteTask(${task.id})">✕</button>
+        </div>
+        <p class="text-xs text-gray-400 mt-1">#${task.id} · ${assigneeLabel}</p>`;
       card.addEventListener('dragstart', () => { dragTaskId = task.id; });
       return card;
     }
 
+    function escHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    // 태스크 렌더링
+    function renderTasks() {
+      const statuses = ['TODO','DOING','DONE'];
+      const counts = { TODO: 0, DOING: 0, DONE: 0 };
+      const visible = filteredTasks(allTasks);
+
+      statuses.forEach(s => {
+        const col = document.getElementById(`col-${s}`);
+        const mobCol = document.getElementById(`mob-col-${s}`);
+        col.innerHTML = '';
+        mobCol.innerHTML = '';
+        const colTasks = visible.filter(t => t.status === s);
+        counts[s] = colTasks.length;
+        if (colTasks.length === 0) {
+          col.innerHTML = emptyState(s);
+          mobCol.innerHTML = emptyState(s);
+        } else {
+          colTasks.forEach(t => {
+            col.appendChild(renderCard(t));
+            mobCol.appendChild(renderCard(t));
+          });
+        }
+      });
+
+      // 헤더 카운트 업데이트
+      document.getElementById('hdr-TODO').textContent = `TODO · ${counts.TODO}`;
+      document.getElementById('hdr-DOING').textContent = `DOING · ${counts.DOING}`;
+      document.getElementById('hdr-DONE').textContent = `DONE · ${counts.DONE}`;
+    }
+
     async function deleteTask(taskId) {
       if (!confirm('삭제할까요?')) return;
-      try { await api('DELETE', `/api/tasks/${taskId}`); loadTasks(); }
+      try { await api('DELETE', `/api/tasks/${taskId}`); await loadTasks(); }
       catch (err) { showError(err.message); }
     }
 
-    function onDragOver(e) {
-      e.preventDefault();
-      e.currentTarget.classList.add('drag-over');
-    }
-
+    // 드래그앤드롭 → PATCH /status
+    function onDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
+    function onDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
     async function onDrop(e, status) {
       e.preventDefault();
       e.currentTarget.classList.remove('drag-over');
       if (!dragTaskId) return;
       try {
-        await api('PUT', `/api/tasks/${dragTaskId}`, { status });
+        await api('PATCH', `/api/tasks/${dragTaskId}/status`, { status });
         dragTaskId = null;
-        loadTasks();
+        await loadTasks();
       } catch (err) { showError(err.message); }
     }
 
-    document.querySelectorAll('.col-drop-zone').forEach(el => {
-      el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
-    });
-
     async function loadTasks() {
       try {
-        const tasks = await api('GET', `/api/teams/${teamId}/tasks`);
-        ['TODO', 'DOING', 'DONE'].forEach(s => document.getElementById(`col-${s}`).innerHTML = '');
-        tasks.forEach(t => {
-          const col = document.getElementById(`col-${t.status}`);
-          if (col) col.appendChild(renderTask(t));
-        });
-
-        // 팀 이름 표시
-        const teamsData = await api('GET', '/api/teams');
-        const team = teamsData.find(t => String(t.id) === String(teamId));
-        if (team) document.getElementById('team-name').textContent = `— ${team.name}`;
+        allTasks = await api('GET', `/api/teams/${teamId}/tasks`);
+        renderTasks();
+        // 팀 이름
+        const teams = await api('GET', '/api/teams');
+        const team = teams.find(t => String(t.id) === String(teamId));
+        if (team) document.getElementById('team-name').textContent = team.name;
       } catch (err) { showError(err.message); }
     }
 

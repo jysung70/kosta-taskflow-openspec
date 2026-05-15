@@ -38,6 +38,8 @@ def create_team(
     team = models.Team(name=req.name, invite_code=invite_code, owner_id=current_user.id)
     team.members.append(current_user)
     db.add(team)
+    db.flush()
+    current_user.team_id = team.id
     db.commit()
     db.refresh(team)
     return {"id": team.id, "name": team.name, "invite_code": team.invite_code, "owner_id": team.owner_id}
@@ -61,6 +63,7 @@ def join_team(
     if current_user in team.members:
         raise HTTPException(status_code=409, detail={"code": "ALREADY_MEMBER", "msg": "이미 소속된 팀입니다"})
     team.members.append(current_user)
+    current_user.team_id = team.id
     db.commit()
     return {"id": team.id, "name": team.name}
 
