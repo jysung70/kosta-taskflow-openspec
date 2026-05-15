@@ -50,7 +50,7 @@
 
 ## 8. 배포 및 검증
 
-- [ ] 8.1 vercel deploy --prod 실행
-- [ ] 8.2 Neon에서 tasks.assignee_id, users.team_id 컬럼 추가 확인
+- [x] 8.1 vercel deploy --prod 실행
+- [x] 8.2 Neon에서 tasks.assignee_id, users.team_id 컬럼 추가 확인
 - [ ] 8.3 브라우저에서 전체 플로우 수동 확인 (회원가입→팀생성→칸반→채팅)
 - [ ] 8.4 모바일 뷰포트 (768px 이하) 칸반 1컬럼 확인
