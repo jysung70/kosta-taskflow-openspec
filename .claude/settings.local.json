@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm info *)",
+      "PowerShell(npm list *)",
+      "Skill(opsx:propose)"
+    ]
+  }
+}
