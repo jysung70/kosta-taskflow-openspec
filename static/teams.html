@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaskFlow — 팀 선택</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gray-50">
+  <nav class="bg-white shadow px-6 py-3 flex justify-between items-center">
+    <span class="text-blue-600 font-bold text-lg">TaskFlow</span>
+    <div class="flex items-center gap-3">
+      <span id="user-email" class="text-sm text-gray-500"></span>
+      <button id="logout-btn" class="text-sm text-gray-400 hover:text-red-500">로그아웃</button>
+    </div>
+  </nav>
+  <div class="max-w-lg mx-auto mt-10 px-4">
+    <p id="error-msg" class="hidden bg-red-50 text-red-600 text-sm rounded p-2 mb-4"></p>
+
+    <!-- 내 팀 목록 -->
+    <div class="bg-white shadow rounded-lg p-6 mb-4">
+      <h2 class="font-semibold text-gray-700 mb-3">내 팀</h2>
+      <ul id="team-list" class="space-y-2"></ul>
+      <p id="no-teams" class="text-sm text-gray-400 hidden">소속된 팀이 없습니다.</p>
+    </div>
+
+    <!-- 팀 만들기 -->
+    <div class="bg-white shadow rounded-lg p-6 mb-4">
+      <h2 class="font-semibold text-gray-700 mb-3">팀 만들기</h2>
+      <form id="create-form" class="flex gap-2">
+        <input id="team-name" type="text" placeholder="팀 이름" required
+          class="flex-1 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm rounded px-4 py-2">만들기</button>
+      </form>
+    </div>
+
+    <!-- 초대코드로 합류 -->
+    <div class="bg-white shadow rounded-lg p-6">
+      <h2 class="font-semibold text-gray-700 mb-3">초대코드로 합류</h2>
+      <form id="join-form" class="flex gap-2">
+        <input id="invite-code" type="text" placeholder="ABCD-1234" required
+          class="flex-1 border border-gray-300 rounded px-3 py-2 text-sm uppercase focus:outline-none focus:ring-2 focus:ring-blue-400">
+        <button type="submit" class="bg-green-600 hover:bg-green-700 text-white text-sm rounded px-4 py-2">합류</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    if (!requireAuth()) throw new Error();
+    const user = getUser();
+    document.getElementById('user-email').textContent = user?.email || '';
+
+    async function loadTeams() {
+      try {
+        const teams = await api('GET', '/api/teams');
+        const list = document.getElementById('team-list');
+        const noTeams = document.getElementById('no-teams');
+        list.innerHTML = '';
+        if (!teams.length) { noTeams.classList.remove('hidden'); return; }
+        noTeams.classList.add('hidden');
+        teams.forEach(t => {
+          const li = document.createElement('li');
+          li.className = 'flex justify-between items-center p-3 bg-gray-50 rounded';
+          li.innerHTML = `
+            <div>
+              <span class="font-medium text-sm">${t.name}</span>
+              <span class="ml-2 text-xs text-gray-400 font-mono">${t.invite_code}</span>
+            </div>
+            <div class="flex gap-2">
+              <a href="/kanban?team=${t.id}" class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200">칸반</a>
+              <a href="/chat?team=${t.id}" class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200">채팅</a>
+            </div>`;
+          list.appendChild(li);
+        });
+      } catch (err) { showError(err.message); }
+    }
+
+    document.getElementById('logout-btn').addEventListener('click', async () => {
+      await api('POST', '/api/auth/logout').catch(() => {});
+      clearAuth();
+      window.location.href = '/';
+    });
+
+    document.getElementById('create-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await api('POST', '/api/teams', { name: document.getElementById('team-name').value });
+        document.getElementById('team-name').value = '';
+        loadTeams();
+      } catch (err) { showError(err.message); }
+    });
+
+    document.getElementById('join-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await api('POST', '/api/teams/join', { invite_code: document.getElementById('invite-code').value.toUpperCase() });
+        document.getElementById('invite-code').value = '';
+        loadTeams();
+      } catch (err) { showError(err.message); }
+    });
+
+    loadTeams();
+  </script>
+</body>
+</html>

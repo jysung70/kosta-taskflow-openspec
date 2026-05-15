@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaskFlow — 칸반</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .task-card { cursor: grab; }
+    .task-card:active { cursor: grabbing; opacity: 0.6; }
+    .col-drop-zone.drag-over { background-color: #dbeafe; }
+  </style>
+</head>
+<body class="min-h-screen bg-gray-100">
+  <nav class="bg-white shadow px-6 py-3 flex justify-between items-center">
+    <div class="flex items-center gap-3">
+      <a href="/teams" class="text-gray-400 hover:text-gray-600 text-sm">← 팀 목록</a>
+      <span class="text-blue-600 font-bold text-lg">TaskFlow</span>
+      <span id="team-name" class="text-sm text-gray-500"></span>
+    </div>
+    <div class="flex gap-2">
+      <a id="chat-link" href="#" class="text-sm bg-green-100 text-green-700 px-3 py-1 rounded hover:bg-green-200">채팅</a>
+      <button id="logout-btn" class="text-sm text-gray-400 hover:text-red-500">로그아웃</button>
+    </div>
+  </nav>
+
+  <p id="error-msg" class="hidden bg-red-50 text-red-600 text-sm rounded p-2 mx-6 mt-2"></p>
+
+  <div class="flex gap-4 p-6 overflow-x-auto">
+    <!-- TODO 컬럼 -->
+    <div class="flex-1 min-w-60">
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="font-bold text-gray-600 uppercase text-sm tracking-wide">📋 TODO</h2>
+        <button onclick="openAddModal('TODO')" class="text-xs bg-gray-200 hover:bg-gray-300 rounded px-2 py-1">+ 추가</button>
+      </div>
+      <div id="col-TODO" class="col-drop-zone space-y-2 min-h-20 rounded-lg p-1"
+        ondragover="onDragOver(event)" ondrop="onDrop(event,'TODO')"></div>
+    </div>
+
+    <!-- DOING 컬럼 -->
+    <div class="flex-1 min-w-60">
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="font-bold text-blue-600 uppercase text-sm tracking-wide">⚡ DOING</h2>
+        <button onclick="openAddModal('DOING')" class="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded px-2 py-1">+ 추가</button>
+      </div>
+      <div id="col-DOING" class="col-drop-zone space-y-2 min-h-20 rounded-lg p-1"
+        ondragover="onDragOver(event)" ondrop="onDrop(event,'DOING')"></div>
+    </div>
+
+    <!-- DONE 컬럼 -->
+    <div class="flex-1 min-w-60">
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="font-bold text-green-600 uppercase text-sm tracking-wide">✅ DONE</h2>
+        <button onclick="openAddModal('DONE')" class="text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded px-2 py-1">+ 추가</button>
+      </div>
+      <div id="col-DONE" class="col-drop-zone space-y-2 min-h-20 rounded-lg p-1"
+        ondragover="onDragOver(event)" ondrop="onDrop(event,'DONE')"></div>
+    </div>
+  </div>
+
+  <!-- 태스크 추가 모달 -->
+  <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-10">
+    <div class="bg-white rounded-lg shadow-xl p-6 w-80">
+      <h3 class="font-semibold mb-3">태스크 추가</h3>
+      <input id="modal-title" type="text" placeholder="태스크 제목" autofocus
+        class="w-full border border-gray-300 rounded px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-blue-400">
+      <div class="flex gap-2 justify-end">
+        <button onclick="closeModal()" class="text-sm text-gray-500 hover:text-gray-700 px-3 py-1">취소</button>
+        <button onclick="addTask()" class="text-sm bg-blue-600 hover:bg-blue-700 text-white rounded px-4 py-1">추가</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    if (!requireAuth()) throw new Error();
+    const teamId = getTeamId();
+    if (!teamId) { window.location.href = '/teams'; throw new Error(); }
+    document.getElementById('chat-link').href = `/chat?team=${teamId}`;
+
+    let dragTaskId = null;
+    let modalStatus = 'TODO';
+
+    function openAddModal(status) {
+      modalStatus = status;
+      document.getElementById('modal-title').value = '';
+      document.getElementById('modal').classList.remove('hidden');
+      document.getElementById('modal-title').focus();
+    }
+    function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+
+    document.getElementById('modal-title').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') addTask();
+      if (e.key === 'Escape') closeModal();
+    });
+
+    async function addTask() {
+      const title = document.getElementById('modal-title').value.trim();
+      if (!title) return;
+      try {
+        await api('POST', `/api/teams/${teamId}/tasks`, { title });
+        closeModal();
+        loadTasks();
+      } catch (err) { showError(err.message); }
+    }
+
+    function renderTask(task) {
+      const card = document.createElement('div');
+      card.className = 'task-card bg-white rounded shadow p-3 text-sm flex justify-between items-start';
+      card.draggable = true;
+      card.dataset.taskId = task.id;
+      card.innerHTML = `
+        <span class="flex-1 pr-2">${task.title}</span>
+        <button class="text-gray-300 hover:text-red-400 text-xs shrink-0" onclick="deleteTask(${task.id})">✕</button>`;
+      card.addEventListener('dragstart', () => { dragTaskId = task.id; });
+      return card;
+    }
+
+    async function deleteTask(taskId) {
+      if (!confirm('삭제할까요?')) return;
+      try { await api('DELETE', `/api/tasks/${taskId}`); loadTasks(); }
+      catch (err) { showError(err.message); }
+    }
+
+    function onDragOver(e) {
+      e.preventDefault();
+      e.currentTarget.classList.add('drag-over');
+    }
+
+    async function onDrop(e, status) {
+      e.preventDefault();
+      e.currentTarget.classList.remove('drag-over');
+      if (!dragTaskId) return;
+      try {
+        await api('PUT', `/api/tasks/${dragTaskId}`, { status });
+        dragTaskId = null;
+        loadTasks();
+      } catch (err) { showError(err.message); }
+    }
+
+    document.querySelectorAll('.col-drop-zone').forEach(el => {
+      el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+    });
+
+    async function loadTasks() {
+      try {
+        const tasks = await api('GET', `/api/teams/${teamId}/tasks`);
+        ['TODO', 'DOING', 'DONE'].forEach(s => document.getElementById(`col-${s}`).innerHTML = '');
+        tasks.forEach(t => {
+          const col = document.getElementById(`col-${t.status}`);
+          if (col) col.appendChild(renderTask(t));
+        });
+
+        // 팀 이름 표시
+        const teamsData = await api('GET', '/api/teams');
+        const team = teamsData.find(t => String(t.id) === String(teamId));
+        if (team) document.getElementById('team-name').textContent = `— ${team.name}`;
+      } catch (err) { showError(err.message); }
+    }
+
+    document.getElementById('logout-btn').addEventListener('click', async () => {
+      await api('POST', '/api/auth/logout').catch(() => {});
+      clearAuth(); window.location.href = '/';
+    });
+
+    loadTasks();
+  </script>
+</body>
+</html>
