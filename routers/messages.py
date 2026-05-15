@@ -24,7 +24,7 @@ def _fmt(m: models.Message) -> dict:
         "content": m.content,
         "user_id": m.user_id,
         "team_id": m.team_id,
-        "created_at": m.created_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "created_at": m.created_at.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",  # millisecond precision
         "sender_email": m.user.email,
     }
 
@@ -54,7 +54,7 @@ def list_messages(
     q = db.query(models.Message).filter(models.Message.team_id == team_id)
     if since:
         try:
-            since_dt = datetime.strptime(since.replace("Z", ""), "%Y-%m-%dT%H:%M:%S")
+            since_dt = datetime.fromisoformat(since.replace("Z", ""))
             q = q.filter(models.Message.created_at > since_dt).order_by(models.Message.created_at.asc())
         except ValueError:
             q = q.order_by(models.Message.created_at.desc()).limit(50)
